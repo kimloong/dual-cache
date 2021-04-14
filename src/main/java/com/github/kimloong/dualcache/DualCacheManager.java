@@ -1,8 +1,9 @@
 package com.github.kimloong.dualcache;
 
+import com.github.kimloong.dualcache.synchronizer.CacheSynchronizer;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.util.Assert;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -11,6 +12,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
+ * <pre>
+ * 为适配复杂场景的缓存，提供本地+分布式两级缓存, 两者不一定都必须存在
+ * 1. 有本地缓存，有分布式缓存，适合缓存量小，但待缓存对象生成(获取)成本高的场景
+ * 2. 有本地缓存，无分布式缓存，适合缓存量小
+ * 3. 无本地缓存，有分布式缓存，可以直接去使用RedisCacheManager，但例外的是如果使用不同的分布式缓存实例(集群)，则可以借助他来实现同步
+ * 4. 无本地缓存，无分布式缓存，要这种场景干嘛
+ * </pre>
+ * 无缓存不要使用null来进行表示，请使用{code org.springframework.cache.support.NoOpCacheManager}
+ *
  * @author kimloong
  */
 public class DualCacheManager implements CacheManager {
@@ -21,11 +31,16 @@ public class DualCacheManager implements CacheManager {
 
     private final CacheManager level2CacheManager;
 
-    private CacheSynchronizer cacheSynchronizer;
+    private final CacheSynchronizer cacheSynchronizer;
 
     public DualCacheManager(CacheManager level1CacheManager,
-                            RedisCacheManager level2CacheManager,
+                            CacheManager level2CacheManager,
                             CacheSynchronizer cacheSynchronizer) {
+        Assert.notNull(level1CacheManager, "level1CacheManager not null," +
+                "please use org.springframework.cache.support.NoOpCacheManager");
+        Assert.notNull(level1CacheManager, "level2CacheManager not null," +
+                "please use org.springframework.cache.support.NoOpCacheManager");
+        Assert.notNull(cacheSynchronizer, "cacheSynchronizer not null");
         this.level1CacheManager = level1CacheManager;
         this.level2CacheManager = level2CacheManager;
         this.cacheSynchronizer = cacheSynchronizer;
@@ -33,13 +48,13 @@ public class DualCacheManager implements CacheManager {
 
     @Override
     public Cache getCache(String name) {
-        Cache cache = this.cacheMap.get(name);
+        Cache cache = cacheMap.get(name);
         if (null == cache) {
-            synchronized (this.cacheMap) {
-                cache = this.cacheMap.get(name);
-                if (cache == null) {
-                    cache = this.createCache(name);
-                    this.cacheMap.put(name, cache);
+            synchronized (cacheMap) {
+                cache = cacheMap.get(name);
+                if (null == cache) {
+                    cache = createCache(name);
+                    cacheMap.put(name, cache);
                 }
             }
         }
@@ -60,9 +75,6 @@ public class DualCacheManager implements CacheManager {
         Cache level1Cache = level1CacheManager.getCache(name);
         Cache level2Cache = level2CacheManager.getCache(name);
 
-        if (null == level1Cache) {
-            return level2Cache;
-        }
         cacheSynchronizer.onAddCache(level1Cache, level2Cache);
 
         return new DualCache(level1Cache, level2Cache, cacheSynchronizer);

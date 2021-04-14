@@ -1,5 +1,6 @@
-package com.github.kimloong.dualcache;
+package com.github.kimloong.dualcache.synchronizer;
 
+import com.github.kimloong.dualcache.Message;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 
@@ -10,6 +11,8 @@ import org.springframework.cache.CacheManager;
  * @author kimloong
  */
 public interface CacheSynchronizer {
+
+    String getGroup();
 
     /**
      * Invoke this when add cache
@@ -25,7 +28,7 @@ public interface CacheSynchronizer {
      * @param cacheName the cache name
      * @param key       the key whose mapping is to be removed from the cache
      */
-    void onEvict(String cacheName, Object key);
+    void publishEvictEvent(String cacheName, Object key);
 
     /**
      * Invoke this when associate the specified value with the specified key in this cache.
@@ -36,7 +39,7 @@ public interface CacheSynchronizer {
      * @param key       the key with which the specified value is to be associated
      * @param value     the value to be associated with the specified key
      */
-    void onPut(String cacheName, Object key, Object value);
+    void publishPutEvent(String cacheName, Object key, Object value);
 
     /**
      * Invoke this when atomically associate the specified value with the specified key in this cache
@@ -61,12 +64,14 @@ public interface CacheSynchronizer {
      * @param key       the key with which the specified value is to be associated
      * @param value     the value to be associated with the specified key
      */
-    void onPutIfAbsent(String cacheName, Object key, Object value);
+    void publishPutIfAbsentEvent(String cacheName, Object key, Object value);
 
     /**
      * Invoke this when remove all mappings from the cache.
      *
      * @param cacheName the cache name
      */
-    void onClear(String cacheName);
+    void publishClearEvent(String cacheName);
+
+    void doReceiveEvent(Cache level1Cache, Cache level2Cache, Message message);
 }

@@ -1,5 +1,6 @@
 package com.github.kimloong.dualcache;
 
+import com.github.kimloong.dualcache.synchronizer.CacheSynchronizer;
 import org.springframework.cache.Cache;
 
 import java.util.concurrent.Callable;
@@ -71,14 +72,14 @@ public class DualCache implements Cache {
     public void put(Object key, Object value) {
         level2Cache.put(key, value);
         level1Cache.put(key, value);
-        cacheSynchronizer.onPut(getName(), key, value);
+        cacheSynchronizer.publishPutEvent(getName(), key, value);
     }
 
     @Override
     public ValueWrapper putIfAbsent(Object key, Object value) {
         level2Cache.putIfAbsent(key, value);
         ValueWrapper valueWrapper = level1Cache.putIfAbsent(key, value);
-        cacheSynchronizer.onPutIfAbsent(getName(), key, value);
+        cacheSynchronizer.publishPutIfAbsentEvent(getName(), key, value);
         return valueWrapper;
     }
 
@@ -86,13 +87,13 @@ public class DualCache implements Cache {
     public void evict(Object key) {
         level2Cache.evict(key);
         level1Cache.evict(key);
-        cacheSynchronizer.onEvict(getName(), key);
+        cacheSynchronizer.publishEvictEvent(getName(), key);
     }
 
     @Override
     public void clear() {
         level2Cache.clear();
         level1Cache.clear();
-        cacheSynchronizer.onClear(getName());
+        cacheSynchronizer.publishClearEvent(getName());
     }
 }

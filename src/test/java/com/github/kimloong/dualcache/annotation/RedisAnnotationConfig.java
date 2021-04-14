@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.kimloong.dualcache.DualCacheManager;
-import com.github.kimloong.dualcache.RedisPubSubCacheSynchronizer;
+import com.github.kimloong.dualcache.synchronizer.RedisPubSubCacheSynchronizer;
 import com.google.common.cache.CacheBuilder;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.guava.GuavaCacheManager;
